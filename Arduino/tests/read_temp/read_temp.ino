@@ -11,7 +11,7 @@ const double resolution = 0.25193548; //in mV, 3.3V / 2^13-1 or actually just a 
 const double vOffset = 500; //in mV, from datasheet
 const int tempCoeff = 10;
 double vOut;
-bool verbose = false;
+bool verbose = true;
 
 void loop()
 {
