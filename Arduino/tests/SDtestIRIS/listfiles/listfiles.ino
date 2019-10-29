@@ -35,7 +35,7 @@ void setup() {
 
   Serial.print("Initializing SD card...");
 
-  if (!SD.begin(4)) {
+  if (!SD.begin(31)) {
     Serial.println("initialization failed!");
     while (1);
   }
@@ -75,6 +75,3 @@ void printDirectory(File dir, int numTabs) {
     entry.close();
   }
 }
-
-
-

@@ -19,9 +19,8 @@
 Adafruit_HTU21DF htu = Adafruit_HTU21DF();
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(38400);
   Serial.println("HTU21D-F test");
-
   if (!htu.begin()) {
     Serial.println("Couldn't find sensor!");
     while (1);
@@ -35,4 +34,5 @@ void loop() {
     Serial.print("\t\t");
     Serial.print("Humidity: "); Serial.print(rel_hum); Serial.println(" \%");
     delay(500);
+    Serial.println("HTU21D-F test");
 }
