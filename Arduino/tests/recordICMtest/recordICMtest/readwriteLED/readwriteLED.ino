@@ -40,15 +40,19 @@ void loop() {
   // Blinks the LED on and off repeatedly if rec_var is set to "on".
   if (rec_var == 1) {
     digitalWrite(led, HIGH);   // turn the LED on (HIGH is the voltage level)
-    Serial.println("LED ON");
-    delay(100);               // wait for 100ms
+//    Serial.println("LED ON");
+    delay(100);                // wait for 100ms
     digitalWrite(led, LOW);    // turn the LED off by making the voltage LOW
-    Serial.println("LED OFF");
-    delay(100);               // wait for 100ms
+//    Serial.println("LED OFF");
+    Serial.println("IRIS is recording.");
+    Serial.print('\n');
+    delay(1000);               // wait for 100ms
   }
   // Does nothing or stops blinking if rec_var is set to "off".
   else if (rec_var == 0) {
-    Serial.print("IRIS is not recording.");
+    Serial.println("IRIS is not recording.");
+    Serial.print('\n');
+    delay(1000);
   }
   
 }

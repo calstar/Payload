@@ -19,7 +19,7 @@ const int chipSelect = BUILTIN_SDCARD; // Maps to 254 I think
 int counter = 0;
 
 // Variable to keep track of whether IRIS should be recording.
-int rec_var = 0;
+int rec_var = 2;
 
 void setup()
 { 
@@ -70,7 +70,7 @@ void loop()
 //  while (counter < 100) {
 //    if (myICM.dataReady()) {
 //      myICM.getAGMT();                // The values are only updated when you call 'getAGMT'
-//      printScaledAGMT(myICM.agmt);   // This function takes into account the sclae settings from when the measurement was made to calculate the values with units
+//      printScaledAGMT(myICM.agmt);   // This function takes into account the scale settings from when the measurement was made to calculate the values with units
 //      delay(30);
 //    } else {
 //      Serial.println("Waiting for data");
@@ -130,7 +130,7 @@ void loop()
     delay(1000);
     if (myICM.dataReady()) {
       myICM.getAGMT();                // The values are only updated when you call 'getAGMT'
-      printScaledAGMT(myICM.agmt);   // This function takes into account the scale settings from when the measurement was made to calculate the values with units
+      printScaledAGMT(myICM.agmt);    // This function takes into account the scale settings from when the measurement was made to calculate the values with units
       delay(30);
     } else {
       Serial.println("Waiting for data");
@@ -139,11 +139,33 @@ void loop()
   }
   // Does nothing or stops recording if rec_var is set to "off".
   else if (rec_var == 0) {
-    Serial.print("IRIS is not recording.");
+    Serial.print("IRIS has stopped recording. Data saved to file. Probably.");
+    Serial.print('\n');
+    delay(10000);
+    myFile.close();
+    myFile = SD.open("test.txt");
+    if (myFile) {
+      Serial.println("test.txt:");
+      // read from the file until there's nothing else in it:
+      while (myFile.available()) {
+        Serial.write(myFile.read());
+      }
+      // close the file:
+      myFile.close();
+    } else {
+      // if the file didn't open, print an error:
+      Serial.println("error opening test.txt");
+    }
+  myFile.close();
+  Serial.println("Finished loop data");
+  rec_var = 2;
+  }
+  else if (rec_var == 2) {
+    Serial.print("IRIS is on standby.");
     Serial.print('\n');
     delay(1000);
   }
-
+  
 }
 
 void printFormattedFloat(float val, uint8_t leading, uint8_t decimals){
