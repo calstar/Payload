@@ -18,8 +18,12 @@ File myFile;
 const int chipSelect = BUILTIN_SDCARD; // Maps to 254 I think
 int counter = 0;
 
+// Returns the number of milliseconds passed since the Arduino board began running the current program.
+unsigned int last_time = millis();
+
 // Variable to keep track of whether IRIS should be recording.
 int rec_var = 2;
+int disp_var = 2;
 
 void setup()
 { 
@@ -100,20 +104,25 @@ void loop()
 
   // Serial.available gets the number of bytes (characters) available for reading from the serial port.
   // The serial receive buffer can only store up to 64 bytes of data, so the start/stop commands are single characters.
+  // To start recording, input "i" into serial monitor. To stop recording, input "o" into serial monitor.
   
   // If there is readable data inputted into the serial port:
   if (Serial.available() > 0) {
-  
+
+      // Serial.read() gets a character from the buffer and then throws it away, so the first one will be gone by the time you get to the elseif.
+      // Saves the result of Serial.read() in a variable, then the if/elseif statements check against that variable.
+      char ser_var = Serial.read();
+      
       // Reads incoming serial data. Sets rec_var to "on" if 'i' is inputted into serial monitor.
-      if (Serial.read() == 'i') {
-        rec_var = 1;
+      if (ser_var == 'i') {
+        disp_var = 1;
         Serial.print("Now recording.");       // status message
         Serial.print('\n');                   // starts a new line
       }
       // Reads incoming serial data. Sets rec_var to "off" if 'o' is inputted into serial monitor.
       // For some reason I can't debug, it'll only stop if you type more than one 'o' into the serial monitor.
-      else if (Serial.read() == 'o') {
-        rec_var = 0;
+      else if (ser_var == 'o') {
+        disp_var = 0;
         Serial.print("Recording stopped.");   // status message
         Serial.print('\n');                   // starts a new line.
       }
@@ -123,25 +132,36 @@ void loop()
   else {
   }
 
-  // Records data onto SD card if rec_var is set to "on".
+  // Prints out status message to serial monitor indicating whether recording is on.
+    if (disp_var == 1) {
+      Serial.print("IRIS is recording.");
+      Serial.println();
+      rec_var = 1;
+      disp_var = 3;
+  } else if (disp_var == 0) {
+      Serial.print("IRIS has stopped recording. Data saved to file. Probably.");
+      Serial.println();
+      rec_var = 0;
+      disp_var = 3;
+  } else if (disp_var == 2) {
+      Serial.print("IRIS is on standby.");
+      Serial.println();
+      disp_var = 3;
+  }
+  
+  // Records data onto SD card/data file if rec_var is set to "on".
   if (rec_var == 1) {
-    Serial.print("IRIS is recording.");
-    Serial.print('\n');
-    delay(1000);
     if (myICM.dataReady()) {
       myICM.getAGMT();                // The values are only updated when you call 'getAGMT'
+      last_time = millis();
       printScaledAGMT(myICM.agmt);    // This function takes into account the scale settings from when the measurement was made to calculate the values with units
-      delay(30);
+      delay(10);
     } else {
       Serial.println("Waiting for data");
-      delay(500);
+      delay(1);
     }
-  }
-  // Does nothing or stops recording if rec_var is set to "off".
-  else if (rec_var == 0) {
-    Serial.print("IRIS has stopped recording. Data saved to file. Probably.");
-    Serial.print('\n');
-    delay(10000);
+  // Stops recording and closes the data file if rec_var is set to "off".
+  } else if (rec_var == 0) {
     myFile.close();
     myFile = SD.open("test.txt");
     if (myFile) {
@@ -160,14 +180,10 @@ void loop()
   Serial.println("Finished loop data");
   rec_var = 2;
   }
-  else if (rec_var == 2) {
-    Serial.print("IRIS is on standby.");
-    Serial.print('\n');
-    delay(1000);
-  }
   
 }
 
+// Numerically formarts data values.
 void printFormattedFloat(float val, uint8_t leading, uint8_t decimals){
   float aval = abs(val);
   if(val < 0){
@@ -196,7 +212,11 @@ void printFormattedFloat(float val, uint8_t leading, uint8_t decimals){
   }
 }
 
+// Prints various data values to text file.
 void printScaledAGMT( ICM_20948_AGMT_t agmt){
+  myFile.print("Time (ms) [ ");
+  myFile.print(last_time);
+  myFile.print(" ], ");
   myFile.print("Scaled. Acc (mg) [ ");
   printFormattedFloat( myICM.accX(), 5, 2 );
   myFile.print(", ");
