@@ -165,7 +165,7 @@ void loop()
     myFile.close();
     myFile = SD.open("test.txt");
     if (myFile) {
-      Serial.println("test.txt:");
+//      Serial.println("test.txt:");
       // read from the file until there's nothing else in it:
       while (myFile.available()) {
         Serial.write(myFile.read());
