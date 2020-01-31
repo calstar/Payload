@@ -18,8 +18,12 @@ File myFile;
 const int chipSelect = BUILTIN_SDCARD; // Maps to 254 I think
 int counter = 0;
 
+// initializes iterative file naming variables
+int filecounter = 1;
+char filename[128];
+
 // Returns the number of milliseconds passed since the Arduino board began running the current program.
-unsigned int last_time = millis();
+unsigned int last_time;
 
 // Variable to keep track of whether IRIS should be recording.
 int rec_var = 2;
@@ -27,8 +31,11 @@ int disp_var = 2;
 
 void setup()
 { 
+  last_time = millis();
+  snprintf(filename, 128, "FILE-%d.txt", filecounter);
  // Open serial communications and wait for port to open:
   Serial.begin(115200);
+  Serial.println("Opened serial connection.");
   /**while (!Serial) {
     ; // wait for serial port to connect. Needed for Leonardo only
   }**/
@@ -58,7 +65,14 @@ void setup()
 
   // Open the file. note that only one file can be open at a time,
   // so you have to close this one before opening another.
-  myFile = SD.open("test.txt", FILE_WRITE);
+  
+  // if the filename already exists
+  while (SD.exists(filename)) {
+    filecounter++;    // increment filecount by one
+    snprintf(filename, 128, "FILE-%d.txt", filecounter);
+  }
+
+  myFile = SD.open(filename, FILE_WRITE);
   
   // Display the sucess of opening the file
   if (myFile) {
@@ -163,7 +177,7 @@ void loop()
   // Stops recording and closes the data file if rec_var is set to "off".
   } else if (rec_var == 0) {
     myFile.close();
-    myFile = SD.open("test.txt");
+    myFile = SD.open(filename);
     if (myFile) {
 //      Serial.println("test.txt:");
       // read from the file until there's nothing else in it:
