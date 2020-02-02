@@ -2,6 +2,7 @@
 Record IMU data and record to the SD card on a Teensy 3.6 using SDHC (not SPI)
 Rajiv Govindjee
 ra@berkeley.edu
+Bryant La
 **/
 #include "ICM_20948.h"  // Click here to get the library: http://librarymanager/All#SparkFun_ICM_20948_IMU
 
@@ -15,7 +16,7 @@ ICM_20948_SPI myICM;  // If using SPI create an ICM_20948_SPI object
 
 File myFile;
 
-const int chipSelect = BUILTIN_SDCARD; // Maps to 254 I think
+const int chipSelect = BUILTIN_SDCARD; // Maps to 254 I think -- make sure you select Tools > Board: Teensy 3.6 if this doesn't compile
 int counter = 0;
 
 // initializes iterative file naming variables
@@ -66,11 +67,14 @@ void setup()
   // Open the file. note that only one file can be open at a time,
   // so you have to close this one before opening another.
   
-  // if the filename already exists
+  // If the filename already exists, pick a new unique filename
+  Serial.println("Checking file existence");
   while (SD.exists(filename)) {
+    Serial.println("Incrementing filecounter");
     filecounter++;    // increment filecount by one
     snprintf(filename, 128, "FILE-%d.txt", filecounter);
   }
+  Serial.println(filename);
 
   myFile = SD.open(filename, FILE_WRITE);
   
@@ -84,45 +88,12 @@ void setup()
 
 void loop()
 {
-  //loop for a finite amount of time to avoid having to stop in the middle of a write
-//  while (counter < 100) {
-//    if (myICM.dataReady()) {
-//      myICM.getAGMT();                // The values are only updated when you call 'getAGMT'
-//      printScaledAGMT(myICM.agmt);   // This function takes into account the scale settings from when the measurement was made to calculate the values with units
-//      delay(30);
-//    } else {
-//      Serial.println("Waiting for data");
-//      delay(500);
-//    }
-//    counter++;
-//  }
-//  if (counter == 100) {
-//    myFile.close();
-//    myFile = SD.open("test.txt");
-//    if (myFile) {
-//      Serial.println("test.txt:");
-//      // read from the file until there's nothing else in it:
-//      while (myFile.available()) {
-//        Serial.write(myFile.read());
-//      }
-//      // close the file:
-//      myFile.close();
-//    } else {
-//      // if the file didn't open, print an error:
-//      Serial.println("error opening test.txt");
-//    }
-//    counter++;
-//  }
-//  myFile.close();
-//  Serial.println("Finished loop data");
-
   // Serial.available gets the number of bytes (characters) available for reading from the serial port.
   // The serial receive buffer can only store up to 64 bytes of data, so the start/stop commands are single characters.
   // To start recording, input "i" into serial monitor. To stop recording, input "o" into serial monitor.
   
-  // If there is readable data inputted into the serial port:
+  // If there is readable data inputted into the serial port, handle it:
   if (Serial.available() > 0) {
-
       // Serial.read() gets a character from the buffer and then throws it away, so the first one will be gone by the time you get to the elseif.
       // Saves the result of Serial.read() in a variable, then the if/elseif statements check against that variable.
       char ser_var = Serial.read();
@@ -130,36 +101,24 @@ void loop()
       // Reads incoming serial data. Sets rec_var to "on" if 'i' is inputted into serial monitor.
       if (ser_var == 'i') {
         disp_var = 1;
-        Serial.print("Now recording.");       // status message
-        Serial.print('\n');                   // starts a new line
-      }
-      // Reads incoming serial data. Sets rec_var to "off" if 'o' is inputted into serial monitor.
-      // For some reason I can't debug, it'll only stop if you type more than one 'o' into the serial monitor.
-      else if (ser_var == 'o') {
+        Serial.println("Now recording.");       // status message
+      } else if (ser_var == 'o') { // Reads incoming serial data. Sets rec_var to "off" if 'o' is inputted into serial monitor.
         disp_var = 0;
-        Serial.print("Recording stopped.");   // status message
-        Serial.print('\n');                   // starts a new line.
+        Serial.println("Recording stopped.");   // status message
       }
-      else {
-      }
-  }
-  else {
   }
 
   // Prints out status message to serial monitor indicating whether recording is on.
     if (disp_var == 1) {
-      Serial.print("IRIS is recording.");
-      Serial.println();
+      Serial.println("IRIS is recording.");
       rec_var = 1;
       disp_var = 3;
   } else if (disp_var == 0) {
-      Serial.print("IRIS has stopped recording. Data saved to file. Probably.");
-      Serial.println();
+      Serial.println("IRIS has stopped recording, data saved to file (probably)");
       rec_var = 0;
       disp_var = 3;
   } else if (disp_var == 2) {
-      Serial.print("IRIS is on standby.");
-      Serial.println();
+      Serial.println("IRIS is on standby.");
       disp_var = 3;
   }
   
@@ -177,24 +136,9 @@ void loop()
   // Stops recording and closes the data file if rec_var is set to "off".
   } else if (rec_var == 0) {
     myFile.close();
-    myFile = SD.open(filename);
-    if (myFile) {
-//      Serial.println("test.txt:");
-      // read from the file until there's nothing else in it:
-      while (myFile.available()) {
-        Serial.write(myFile.read());
-      }
-      // close the file:
-      myFile.close();
-    } else {
-      // if the file didn't open, print an error:
-      Serial.println("error opening test.txt");
-    }
-  myFile.close();
-  Serial.println("Finished loop data");
-  rec_var = 2;
+    Serial.println("Finished loop data");
+    rec_var = 2;
   }
-  
 }
 
 // Numerically formarts data values.
