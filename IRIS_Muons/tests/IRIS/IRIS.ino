@@ -61,7 +61,6 @@
 #define WIRE_PORT Wire  // Your desired Wire port.      Used when "USE_SPI" is not defined
 // ICM_20948_SPI myICM;  // If using SPI create an ICM_20948_SPI object
 
-
 File myFile;
 
 const int chipSelect = BUILTIN_SDCARD; // Maps to 254 I think -- make sure you select Tools > Board: Teensy 3.6 if this doesn't compile
