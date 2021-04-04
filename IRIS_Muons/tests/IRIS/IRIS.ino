@@ -74,18 +74,7 @@ char filename[128];
 unsigned int last_time;
 
 // Variable to keep track of whether IRIS should be recording.
-int rec_var = 2;
-int disp_var = 2;
-
-// Some more definitions for the BMP280 sensor.
-#define BMP_SCK 13
-#define BMP_MISO 12
-#define BMP_MOSI 11
-#define BMP_CS 9
-
-//Adafruit_BMP280 bme; // I2C
-Adafruit_BMP280 bme(BMP_CS); // hardware SPI
-//Adafruit_BMP280 bme(BMP_CS, BMP_MOSI, BMP_MISO,  BMP_SCK);
+int rec_var = 0;
 
 void setup()
 { 
@@ -142,49 +131,31 @@ void setup()
     Serial.println("Error opening test.txt");
   }
 
-  // Checks for BMP280 sensor.
-    Serial.begin(9600);
-  Serial.println("BMP280 test");
+//  // Checks for BMP280 sensor.
+//    Serial.begin(9600);
+//  Serial.println("BMP280 test");
   
   if (!bme.begin()) {  
     Serial.println("Could not find a valid BMP280 sensor, check wiring!");
   }
+
+  Serial.println("To start recording, type ON into serial monitor. To stop recording, type OFF into serial monitor.");
 }
 
 void loop()
-{
-  // Serial.available gets the number of bytes (characters) available for reading from the serial port.
-  // The serial receive buffer can only store up to 64 bytes of data, so the start/stop commands are single characters.
-  // To start recording, input "i" into serial monitor. To stop recording, input "o" into serial monitor.
-  
-  // If there is readable data inputted into the serial port, handle it:
+  // if there is readable data inputted into the serial port:
   if (Serial.available() > 0) {
-      // Serial.read() gets a character from the buffer and then throws it away, so the first one will be gone by the time you get to the elseif.
-      // Saves the result of Serial.read() in a variable, then the if/elseif statements check against that variable.
-      char ser_var = Serial.read();
-      
-      // Reads incoming serial data. Sets rec_var to "on" if 'i' is inputted into serial monitor.
-      if (ser_var == 'i') {
-        disp_var = 1;
-        Serial.println("Now recording.");       // status message
-      } else if (ser_var == 'o') { // Reads incoming serial data. Sets rec_var to "off" if 'o' is inputted into serial monitor.
-        disp_var = 0;
-        Serial.println("Recording stopped.");   // status message
-      }
-  }
-
-  // Prints out status message to serial monitor indicating whether recording is on.
-    if (disp_var == 1) {
-      Serial.println("IRIS is recording.");
+    // reads incoming serial data as string
+    String command = Serial.readStringUntil('\n');
+    char temp = Serial.read(); // remove invisible characters left in buffer
+    
+    if (command == "ON") {
       rec_var = 1;
-      disp_var = 3;
-  } else if (disp_var == 0) {
-      Serial.println("IRIS has stopped recording, data saved to file (probably).");
+      Serial.println("IRIS is recording.");
+    } else if (command == "OFF") {
       rec_var = 0;
-      disp_var = 3;
-  } else if (disp_var == 2) {
-      Serial.println("IRIS is on standby.");
-      disp_var = 3;
+      Serial.println("IRIS has stopped recording, data saved to file (probably).");
+    }
   }
   
   // Records data onto SD card/data file if rec_var is set to "on".
