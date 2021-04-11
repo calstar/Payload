@@ -3,7 +3,7 @@
 #include "LIS2MDL.h" // magnetometer
 #include "LPS22HB.h" // pressure and temperature sensor
 #include "LSM6DSM.h" // accelerometer and gyrometer
-// HSC differential pressure sensor
+// HSC differential pressure sensor (as of 04/11/2021: not currently on board)
 #include "HoneywellTruStabilitySPI.h"  // Click here to get the library: http://librarymanager/All#Honeywell_TruStability_SPI
 // ADXL accelerometer
 #include "ADXL372.h" // Click here to get library: https://github.com/gednrs/ADXL372
@@ -55,11 +55,11 @@
 #define TX_MCU 20
 
 /* SPI serial communication setup */
-#define SERIAL_PORT Serial
-#define SPI_PORT SPI    // Your desired SPI port.       Used only when "USE_SPI" is defined
-#define CS_PIN 10        // Which pin you connect CS to. Used only when "USE_SPI" is defined
-#define WIRE_PORT Wire  // Your desired Wire port.      Used when "USE_SPI" is not defined
-// ICM_20948_SPI myICM;  // If using SPI create an ICM_20948_SPI object
+//#define SERIAL_PORT Serial
+//#define SPI_PORT SPI    // Your desired SPI port.       Used only when "USE_SPI" is defined
+//#define CS_PIN 10        // Which pin you connect CS to. Used only when "USE_SPI" is defined
+//#define WIRE_PORT Wire  // Your desired Wire port.      Used when "USE_SPI" is not defined
+//// ICM_20948_SPI myICM;  // If using SPI create an ICM_20948_SPI object
 
 File myFile;
 
@@ -74,7 +74,7 @@ char filename[128];
 unsigned int last_time;
 
 // Variable to keep track of whether IRIS should be recording.
-int rec_var = 0;
+int rec_var = 2;
 
 void setup()
 { 
