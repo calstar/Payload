@@ -17,6 +17,14 @@ int led_r = 30;
 int led_g = 31;
 int led_y = 32;
 
+// ADXL accelerometer
+#define HG_INT1 36
+#define HG_INT2 35
+#define SCLK_1 27
+#define MOSI_1 26
+#define MISO_1 39
+#define CS_HG 38
+
 // the setup routine runs once when you press reset:
 void setup() {
   // initialize the digital pin as an output.
