@@ -3,8 +3,8 @@
 #include "ADXL372.h" // Click here to get library: https://github.com/gednrs/ADXL372
 // ST motion breakout IMU // Click here to get library: https://github.com/gregtomasch/USFSMAX
 // missing libraries:
-// <i2c_t3.h> (only compatible with Teensy 3.x, replace with https://www.pjrc.com/teensy/td_libs_Wire.html)
-// "Global.h" (required unknown <FS.h> library)
+// <i2c_t3.h> (only compatible with Teensy 3.x, replace with Wire.h https://www.pjrc.com/teensy/td_libs_Wire.html)
+// "Global.h" (requires unknown <FS.h> library)
 #include "Alarms.h"
 #include "I2Cdev.h"
 #include "USFSMAX.h"
@@ -12,15 +12,22 @@
 #include "IMU.h"
 #include "Types.h"
 #include "def.h"
+// HSC differential pressure sensor (as of 04/11/2021: not currently on board)
+#include "HoneywellTruStabilitySPI.h"  // Click here to get the library: http://librarymanager/All#Honeywell_TruStability_SPI
+// Muons
+In order to use the code below, a few libraries must be installed.
+#include "Adafruit_SSD1306.h" // Click here to get the library (Version 1.1.2): http://librarymanager/All#Adafruit_SSD1306
+#include "Adafruit_GFX_Library.h" // Click here to get the library (Version 1.0.2): http://librarymanager/All#Adafruit-GFX-Library
+#include TimerOne.h
+#include EEPROM.h
+// SD card libraries:
+#include <SPI.h>
+#include <SD.h>
+/* incorrect libraries that were originally chosen for the ST motion breakout IMU */
 //// incorrect library: https://github.com/kriswiner/LSM6DSM_LIS2MDL_LPS22HB
 //#include "LIS2MDL.h" // magnetometer
 //#include "LPS22HB.h" // pressure and temperature sensor
 //#include "LSM6DSM.h" // accelerometer and gyrometer
-// HSC differential pressure sensor (as of 04/11/2021: not currently on board)
-#include "HoneywellTruStabilitySPI.h"  // Click here to get the library: http://librarymanager/All#Honeywell_TruStability_SPI
-// SD card libraries:
-#include <SPI.h>
-#include <SD.h>
 
 /* define pins */
 // ADXL accelerometer
@@ -44,6 +51,7 @@
 #define MISO_1 39
 // Muons
 #define DETECTOR 14
+#define IO1_SYNC 2
 // LED Debug
 #define RGB_R 30
 #define RGB_Y 31
@@ -55,7 +63,6 @@
 #define CS_MEM 10
 #define RST_MEM 9
 // MISC.
-#define IO1_SYNC 2
 #define IO2 3
 #define IO3 4
 #define IO4 5
@@ -88,6 +95,34 @@ void       ProcEventStatus(I2Cdev* i2c_BUS, uint8_t sensorNUM);
 void       FetchUSFSMAX_Data(USFSMAX* usfsmax, IMU* IMu, uint8_t sensorNUM);
 void       DRDY_handler_0();
 void       SerialInterface_handler();
+
+/* Muons setup */
+const int SIGNAL_THRESHOLD    = 50;        // Min threshold to trigger on
+const int RESET_THRESHOLD     = 15; 
+const int LED_BRIGHTNESS      = 255;         // Brightness of the LED [0,255]
+//Calibration fit data for 10k,10k,249,10pf; 20nF,100k,100k, 0,0,57.6k,  1 point
+const long double cal[] = {-9.085681659276021e-27, 4.6790804314609205e-23, -1.0317125207013292e-19,
+  1.2741066484319192e-16, -9.684460759517656e-14, 4.6937937442284284e-11, -1.4553498837275352e-08,
+   2.8216624998078298e-06, -0.000323032620672037, 0.019538631135788468, -0.3774384056850066, 12.324891083404246};
+const int cal_max = 1023;
+//initialize variables
+char detector_name[40];
+unsigned long time_stamp                    = 0L;
+unsigned long measurement_deadtime          = 0L;
+unsigned long time_measurement              = 0L;      // Time stamp
+unsigned long interrupt_timer               = 0L;      // Time stamp
+int           start_time                    = 0L;      // Start time reference variable
+long int      total_deadtime                = 0L;      // total time between signals
+unsigned long measurement_t1;
+unsigned long measurement_t2;
+float temperatureC;
+long int      count                         = 0L;         // A tally of the number of muon counts observed
+float         last_adc_value                = 0;
+char          filename[]                    = "File_000.txt";
+int           Mode                          = 1;
+byte SLAVE;
+byte MASTER;
+byte keep_pulse;
 
 // Teensy 3.5 & 3.6 & 4.1 on-board: BUILTIN_SDCARD
 const int chipSelect = BUILTIN_SDCARD; // Maps to 254 I think -- make sure you select Tools > Board: Teensy 4.1 if this doesn't compile
@@ -165,6 +200,14 @@ void setup() {
   SENSOR_0_WIRE_INSTANCE.setClock(I2C_CLOCK);     // Set the I2C clock to high speed for run-mode data collection
   delay(100);
   **/
+
+  /* Muons */
+  analogReference (EXTERNAL);
+  ADCSRA &= ~(bit (ADPS0) | bit (ADPS1) | bit (ADPS2));    // clear prescaler bits
+  //ADCSRA |= bit (ADPS1);                                   // Set prescaler to 4  
+  ADCSRA |= bit (ADPS0) | bit (ADPS1); // Set prescaler to 8
+  pinMode(RGB_R, OUTPUT); 
+  pinMode(RGB_Y, INPUT);
 
   /* File */
   // Open the file. note that only one file can be open at a time,
@@ -313,7 +356,62 @@ void printScaledData(){
   myFile.print(" ]");
   myFile.println();
   **/
+
+  // Muons (core)
+  if (analogRead(DETECTOR) > SIGNAL_THRESHOLD){
+    int adc = analogRead(DETECTOR);
+    if (MASTER == 1) {
+      digitalWrite(RGB_Y, HIGH);
+      count++;
+      keep_pulse = 1;
+    }
+    if (SLAVE == 1){
+        if (digitalRead(RGB_Y) == HIGH){
+          keep_pulse = 1;
+          count++;
+        }
+    } 
+    if (MASTER == 1){
+        digitalWrite(RGB_Y, LOW);
+    }
+    measurement_deadtime = total_deadtime;
+    time_stamp = millis() - start_time;
+    measurement_t1 = micros();  
+
+    if (MASTER == 1) {
+        digitalWrite(RGB_Y, LOW); 
+        analogWrite(RGB_R, LED_BRIGHTNESS);
+        Serial.println("Muons count: " + (String)count + ", time: " + time_stamp+ ", adc: " + adc+ ", sipm: " + get_sipm_voltage(adc)+ ", deadtime: " + measurement_deadtime);
+        myFile.println("Muons count: " + (String)count + ", time: " + time_stamp+ ", adc: " + adc+ ", sipm: " + get_sipm_voltage(adc)+ ", deadtime: " + measurement_deadtime);
+        myFile.flush();
+        last_adc_value = adc;}
+    if (SLAVE == 1) {
+        if (keep_pulse == 1){   
+            analogWrite(RGB_R, LED_BRIGHTNESS);
+            Serial.println("Muons count: " + (String)count + ", time: " + time_stamp+ ", adc: " + adc+ ", sipm: " + get_sipm_voltage(adc)+ ", deadtime: " + measurement_deadtime);
+            myFile.println("Muons count: " + (String)count + ", time: " + time_stamp+ ", adc: " + adc+ ", sipm: " + get_sipm_voltage(adc)+ ", deadtime: " + measurement_deadtime);
+            myFile.flush();
+            last_adc_value = adc;
+        }
+    }     
+    keep_pulse = 0;
+    digitalWrite(RGB_R, LOW);
+    while(analogRead(DETECTOR) > RESET_THRESHOLD){continue;}
+    total_deadtime += (micros() - measurement_t1) / 1000.;
+  }
+
+  // Muons (top)
+  // The code would be similar, but the microcontroller on the core board would be reading from the IO1_SYNC pin
+  // (connected to the top Muons detector) instead of the DETECTOR pin.
 }
+
+float get_sipm_voltage(float adc_value){
+  float voltage = 0;
+  for (int i = 0; i < (sizeof(cal)/sizeof(float)); i++) {
+    voltage += cal[i] * pow(adc_value,(sizeof(cal)/sizeof(float)-i-1));
+    }
+    return voltage;
+    }
 
 /* Below are complicated utility functions for the ST IMU you don't need to understand. */
 /**
