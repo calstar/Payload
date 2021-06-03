@@ -310,7 +310,7 @@ void ADXL372::reset() {
 
   Set_op_mode(STAND_BY);
   writeRegister(ADXL372_RESET, ADXL372_RESET_CODE);
-  vTaskDelay(10);
+  delay(10*15); // previously vTaskDelay(10), but this seems to be a FreeRTOS function? Changed to Arudino delay, assuming 1 tick ~= 15ms
 }
 
 /*!
