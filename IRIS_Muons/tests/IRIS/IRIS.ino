@@ -4,7 +4,7 @@
 // ST motion breakout IMU // Click here to get library: https://github.com/gregtomasch/USFSMAX
 // missing libraries:
 // <i2c_t3.h> (only compatible with Teensy 3.x, replace with Wire.h https://www.pjrc.com/teensy/td_libs_Wire.html)
-// "Global.h" (requires unknown <FS.h> library)
+// "Globals.h" (requires unknown <FS.h> library)
 #include "Alarms.h"
 #include "I2Cdev.h"
 #include "USFSMAX.h"
